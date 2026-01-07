@@ -28,8 +28,23 @@ archives:
 checksum:
   name_template: "checksums.txt"
 
+sboms:
+  - artifacts: archive
+
 changelog:
   sort: asc
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: Bug Fixes
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: Dependencies
+      regexp: '^.*?(deps|build\(deps\))(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: Other
+      order: 999
   filters:
     exclude:
       - "^docs:"

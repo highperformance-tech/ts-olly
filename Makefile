@@ -13,14 +13,16 @@ confirm:
 	@echo 'Are you sure? [y/N]' && read ans && [ $${ans:-N} = y ]
 
 # Development
-## deps: install required development tools
+## deps: install required development tools (staticcheck, goreleaser)
 .PHONY: deps
 deps:
 	@echo 'Installing development tools...'
 	go install honnef.co/go/tools/cmd/staticcheck@$(STATICCHECK_VERSION)
+	@command -v goreleaser >/dev/null 2>&1 || { echo "goreleaser not found. Install via: brew install goreleaser"; exit 1; }
 
 ## run: run the ts-olly application
 .PHONY: run
+run:
 	@go run ./cmd/ts-olly -node node1 -logsdir ./cmd/ts-olly/testdata
 
 ## audit: tidy dependencies, then format, vet, and test all code

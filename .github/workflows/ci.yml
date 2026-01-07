@@ -83,5 +83,8 @@ jobs:
           version: "~> v2"
           install-only: true
 
+      - name: Install syft for SBOM generation
+        uses: anchore/sbom-action/download-syft@v0
+
       - name: Build container image
         run: make container

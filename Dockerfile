@@ -1,3 +1,4 @@
 FROM gcr.io/distroless/static-debian12
-COPY ts-olly /
+ARG TARGETPLATFORM
+COPY ${TARGETPLATFORM}/ts-olly /
 CMD ["/ts-olly"]

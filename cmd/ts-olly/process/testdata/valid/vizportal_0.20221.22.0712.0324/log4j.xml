@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE log4j:configuration PUBLIC "-//LOGGER" "log4j.dtd">
+
+<log4j:configuration xmlns:log4j="http://jakarta.apache.org/log4j/">
+
+    <!-- Appenders -->
+    <appender name="dailyFile" class="org.apache.log4j.DailyRollingFileAppender">
+        <param name="File" value="/var/opt/tableau/tableau_server/data/tabsvc/logs/vizportal/vizportal-0.log" />
+        <param name="encoding" value="UTF-8" />
+        <param name="DatePattern" value="'.'yyyy-MM-dd" />
+        <layout class="org.apache.log4j.EnhancedPatternLayout">
+            <param name="ConversionPattern" value="%d{yyyy-MM-dd HH:mm:ss.SSS Z}{UTC} (%X{siteName},%X{userName},%X{wgsessionid},%X{requestId},%X{localRequestId}) %t %X{serviceName}: %-5p %c - %m%n" />
+        </layout>
+    </appender>
+
+    <appender name="rollingFile" class="org.apache.log4j.RollingFileAppender">
+        <param name="File" value="/var/opt/tableau/tableau_server/data/tabsvc/logs/vizportal/vizportal-0.log" />
+        <param name="encoding" value="UTF-8" />
+        <param name="MaxFileSize" value="10MB" />
+        <param name="MaxBackupIndex" value="1" />
+        <layout class="org.apache.log4j.EnhancedPatternLayout">
+            <param name="ConversionPattern" value="%d{yyyy-MM-dd HH:mm:ss.SSS Z}{UTC} (%X{siteName},%X{userName},%X{wgsessionid},%X{requestId},%X{localRequestId}) %t %X{serviceName}: %-5p %c - %m%n" />
+        </layout>
+    </appender>
+
+    <appender name="rollingBufferedFile" class="org.apache.log4j.RollingFileAppender">
+        <param name="File" value="/var/opt/tableau/tableau_server/data/tabsvc/logs/vizportal/vizportal-0.log" />
+        <param name="encoding" value="UTF-8" />
+        <param name="MaxFileSize" value="10MB" />
+        <param name="MaxBackupIndex" value="1" />
+        <param name="BufferedIO" value="true" />
+        <param name="BufferSize" value="4096" />
+        <layout class="org.apache.log4j.EnhancedPatternLayout">
+            <param name="ConversionPattern" value="%d{yyyy-MM-dd HH:mm:ss.SSS Z}{UTC} (%X{siteName},%X{userName},%X{wgsessionid},%X{requestId},%X{localRequestId}) %t %X{serviceName}: %-5p %c - %m%n" />
+        </layout>
+    </appender>
+
+    <appender name="asyncFile" class="org.apache.log4j.AsyncAppender">
+       <param name="BufferSize" value="512" />
+       <appender-ref ref="rollingBufferedFile" />
+    </appender>
+
+
+    <!-- We don't need to actually rewrite anything, we just want to filter and forward to the 'real' appender -->
+    <appender name="versionMismatchFilterAppender" class="org.apache.log4j.rewrite.RewriteAppender">
+         <filter class="org.apache.log4j.varia.StringMatchFilter">
+                <param name="StringToMatch" value="version conflict for"/>
+                <param name="AcceptOnMatch" value="false" />
+        </filter>
+        <appender-ref ref="dailyFile" />
+    </appender>
+
+    <!-- Microservices GRPC Log configuration -->
+    <!-- Define all the appenders that Vizportal uses, but with a separate log file. -->
+    <appender name="dailyFileGrpcAppender" class="org.apache.log4j.DailyRollingFileAppender">
+        <param name="File" value="/var/opt/tableau/tableau_server/data/tabsvc/logs/vizportal/vizportal-grpc-request-0.log" />
+        <param name="encoding" value="UTF-8" />
+        <param name="DatePattern" value="'.'yyyy-MM-dd" />
+        <layout class="org.apache.log4j.EnhancedPatternLayout">
+            <param name="ConversionPattern" value="%d{yyyy-MM-dd HH:mm:ss.SSS Z}{UTC} (%X{siteName},%X{userName},%X{wgsessionid},%X{requestId},%X{localRequestId}) %t %X{serviceName}: %-5p %c - %m%n" />
+        </layout>
+    </appender>
+
+    <appender name="rollingFileGrpcAppender" class="org.apache.log4j.RollingFileAppender">
+        <param name="File" value="/var/opt/tableau/tableau_server/data/tabsvc/logs/vizportal/vizportal-grpc-request-0.log" />
+        <param name="encoding" value="UTF-8" />
+        <param name="MaxFileSize" value="10MB" />
+        <param name="MaxBackupIndex" value="1" />
+        <layout class="org.apache.log4j.EnhancedPatternLayout">
+            <param name="ConversionPattern" value="%d{yyyy-MM-dd HH:mm:ss.SSS Z}{UTC} (%X{siteName},%X{userName},%X{wgsessionid},%X{requestId},%X{localRequestId}) %t %X{serviceName}: %-5p %c - %m%n" />
+        </layout>
+    </appender>
+
+    <appender name="rollingBufferedFileGrpcAppender" class="org.apache.log4j.RollingFileAppender">
+        <param name="File" value="/var/opt/tableau/tableau_server/data/tabsvc/logs/vizportal/vizportal-grpc-request-0.log" />
+        <param name="encoding" value="UTF-8" />
+        <param name="MaxFileSize" value="10MB" />
+        <param name="MaxBackupIndex" value="1" />
+        <param name="BufferedIO" value="true" />
+        <param name="BufferSize" value="4096" />
+        <layout class="org.apache.log4j.EnhancedPatternLayout">
+            <param name="ConversionPattern" value="%d{yyyy-MM-dd HH:mm:ss.SSS Z}{UTC} (%X{siteName},%X{userName},%X{wgsessionid},%X{requestId},%X{localRequestId}) %t %X{serviceName}: %-5p %c - %m%n" />
+        </layout>
+    </appender>
+
+    <appender name="asyncFileGrpcAppender" class="org.apache.log4j.AsyncAppender">
+       <param name="BufferSize" value="512" />
+       <appender-ref ref="rollingBufferedFileGrpcAppender" />
+    </appender>
+
+    <!-- Instrumentation Library Log configuration -->
+    <appender name="dailyFileInstrumentationAppender" class="org.apache.log4j.DailyRollingFileAppender">
+        <param name="File" value="/var/opt/tableau/tableau_server/data/tabsvc/logs/vizportal/vizportal-instrumentation-metrics-0.log" />
+        <param name="encoding" value="UTF-8" />
+        <param name="DatePattern" value="'.'yyyy-MM-dd" />
+        <layout class="org.apache.log4j.EnhancedPatternLayout">
+            <param name="ConversionPattern" value="%d{yyyy-MM-dd HH:mm:ss.SSS Z}{UTC} (%X{siteName},%X{userName},%X{wgsessionid},%X{requestId},%X{localRequestId}) %t %X{serviceName}: %-5p %c - %m%n" />
+        </layout>
+    </appender>
+
+    <appender name="rollingFileInstrumentationAppender" class="org.apache.log4j.RollingFileAppender">
+        <param name="File" value="/var/opt/tableau/tableau_server/data/tabsvc/logs/vizportal/vizportal-instrumentation-metrics-0.log" />
+        <param name="encoding" value="UTF-8" />
+        <param name="MaxFileSize" value="10MB" />
+        <param name="MaxBackupIndex" value="1" />
+        <layout class="org.apache.log4j.EnhancedPatternLayout">
+            <param name="ConversionPattern" value="%d{yyyy-MM-dd HH:mm:ss.SSS Z}{UTC} (%X{siteName},%X{userName},%X{wgsessionid},%X{requestId},%X{localRequestId}) %t %X{serviceName}: %-5p %c - %m%n" />
+        </layout>
+    </appender>
+
+    <appender name="rollingBufferedFileInstrumentationAppender" class="org.apache.log4j.RollingFileAppender">
+        <param name="File" value="/var/opt/tableau/tableau_server/data/tabsvc/logs/vizportal/vizportal-instrumentation-metrics-0.log" />
+        <param name="encoding" value="UTF-8" />
+        <param name="MaxFileSize" value="10MB" />
+        <param name="MaxBackupIndex" value="1" />
+        <param name="BufferedIO" value="true" />
+        <param name="BufferSize" value="4096" />
+        <layout class="org.apache.log4j.EnhancedPatternLayout">
+            <param name="ConversionPattern" value="%d{yyyy-MM-dd HH:mm:ss.SSS Z}{UTC} (%X{siteName},%X{userName},%X{wgsessionid},%X{requestId},%X{localRequestId}) %t %X{serviceName}: %-5p %c - %m%n" />
+        </layout>
+    </appender>
+
+    <appender name="asyncFileInstrumentationAppender" class="org.apache.log4j.AsyncAppender">
+       <param name="BufferSize" value="512" />
+       <appender-ref ref="rollingBufferedFileInstrumentationAppender" />
+    </appender>
+
+
+    <logger name="org.apache.solr.client.solrj.impl.CloudSolrClient" additivity="false">
+       <appender-ref ref="versionMismatchFilterAppender" />
+    </logger>
+
+    <!-- Application Loggers -->
+    <logger name="com.tableausoftware">
+        <level value="info" />
+    </logger>
+
+    <logger name="com.tableau">
+        <level value="info" />
+    </logger>
+
+    <logger name="com.tableausoftware.service.discovery">
+        <level value="info" />
+    </logger>
+
+    <logger name="org.springframework.security">
+        <level value="info" />
+    </logger>
+
+    <!-- 3rdparty Loggers -->
+    <logger name="org.apache.activemq">
+        <level value="info" />
+    </logger>
+
+    <logger name="org.springframework.core">
+        <level value="info" />
+    </logger>
+
+    <logger name="org.springframework.beans">
+        <level value="info" />
+    </logger>
+
+    <logger name="org.springframework.context">
+        <level value="info" />
+    </logger>
+
+    <logger name="org.springframework.web">
+        <level value="info" />
+    </logger>
+
+    <logger name="org.apache.zookeeper.ClientCnxn">
+        <level value="error" />
+    </logger>
+
+    <logger name="com.tableau.siteisolation">
+        <level value="info" />
+    </logger>
+
+
+
+    <logger name="org.apache.http.impl.client">
+        <level value="info" />
+    </logger>
+    <logger name="org.apache.http.impl.conn">
+        <level value="info" />
+    </logger>
+    <logger name="io.grpc.netty">
+        <level value="info" />
+    </logger>
+
+    <!-- Define logger for the grpc.interceptors and break the inheritance chain to not inherit from other appenders and loggers -->
+    <logger name="com.tableau.grpc.interceptors.logging" additivity="false">
+        <level value="warn" />
+        <appender-ref ref="dailyFileGrpcAppender" />
+    </logger>
+
+    <logger name="com.tableausoftware.newrelic.jmx" additivity="false">
+        <level value="info" />
+        <appender-ref ref="dailyFileInstrumentationAppender" />
+    </logger>
+
+    <!-- Root Logger -->
+    <root>
+        <priority value="warn" />
+        <appender-ref ref="dailyFile" />
+    </root>
+
+</log4j:configuration>

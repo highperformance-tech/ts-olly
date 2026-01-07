@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE log4j:configuration PUBLIC "-//LOGGER" "log4j.dtd">
+
+<log4j:configuration xmlns:log4j="http://jakarta.apache.org/log4j/">
+
+    <!-- Appenders -->
+    <appender name="dailyFile" class="org.apache.log4j.DailyRollingFileAppender">
+        <param name="File" value="${logfile}" />
+        <param name="encoding" value="UTF-8" />
+        <param name="DatePattern" value="'.'yyyy-MM-dd" />
+        <layout class="org.apache.log4j.EnhancedPatternLayout">
+            <param name="ConversionPattern" value="%d{yyyy-MM-dd HH:mm:ss.SSS Z}{UTC} (%X{siteName},%X{userName},%X{wgsessionid},%X{requestId},%X{localRequestId}) %t %X{serviceName}: %-5p %c - %m%n" />
+        </layout>
+    </appe

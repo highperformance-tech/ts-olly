@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration>
+    <Properties>
+        <Property name="appender.name">dailyFile</Property>
+        <Property name="log.dir">/var/opt/tableau/tableau_server/data/tabsvc/logs/searchserver</Property>
+        <Property name="log.file.name">searchserver-0.log</Property>
+        <Property name ="metrics.file.name">solr_metrics.log</Property>
+        <Property name="log.file.path">/var/opt/tableau/tableau_server/data/tabsvc/logs/searchserver/searchserver-0.log</Property>
+        <Property name="metrics.file.path">/var/opt/tableau/tableau_server/data/tabsvc/logs/searchserver/solr_metrics.log</Property>
+        <Property name="log.format">%d{yyyy-MM-dd HH:mm:ss.SSS Z}{UTC} (%X{siteName},%X{userName},%X{wgsessionid},%X{requestId}) %t : %-5p %c - %m%n</Property>
+        <Property name="metrics.format">%d{yyyy-MM-dd HH:mm:ss.SSS Z}{UTC} : %-5p %c - collection=%X{collection>}, shard=%X{shard}, replica=%X{replica}, core=%X{core}, %m%n</Property>
+        <Property name="rotate.size">10MB</Property>
+        <Property name="rotate.count">1</Property>
+        <Property name="buffer.size">8192</Property>
+        <Property name="log.retention.days">14</Property>
+    </Properties>
+    <!-- Appenders -->
+    <Appenders>
+        <RollingFile name="dailyFile"
+                     fileName="${log.file.path}"
+                     filePattern="${log.file.path}.%d{yyyy-MM-dd}"
+                     immediateFlush="false">
+            <PatternLayout>
+                <Charset>UTF-8</Charset>
+                <Pattern>${log.format}</Pattern>
+            </PatternLayout>
+            <Policies>
+                <TimeBasedTriggeringPolicy />
+            </Policies>
+            <DefaultRolloverStrategy>
+                <Delete basePath="${log.dir}" maxDepth="1">
+                    <IfAny>
+                        <!-- log retention for this log; purge dated logs older than log.retention.days -->
+                        <IfAll>
+                            <IfFileName regex="${log.file.name}.*" />
+                            <IfLastModified age="${log.retention.days}d" />
+                        </IfAll>
+                        <!-- add entries for any other cleanup here (access log, stdout logs, tomcat log, whatever) -->
+                    </IfAny>
+                </Delete>
+            </DefaultRolloverStrategy>
+
+            <!-- TFSID:872496 suppress this log message from MetricsHistoryHandler -->
+            <RegexFilter regex=".*could not get tags from node.*" onMatch="DENY" onMismatch="NEUTRAL" />
+        </RollingFile>
+
+
+
+
+
+    </Appenders>
+
+    <Loggers>
+        <!-- 3rdparty Loggers -->
+        <Logger name="org.apache.zookeeper.ClientCnxn" level="error" />
+
+        <Logger name="org.apache.solr.core.SolrResourceLoader" level="error" />
+
+        <Logger name="org.apache.solr.schema.IndexSchema" level="warn" />
+
+        <Logger name="org.apache.solr.core.JmxMonitoredgMap" level="warn" />
+
+        <Logger name="org.apache.solr.core.CachingDirectoryFactory" level="warn" />
+
+        <Logger name="org.apache.solr.core.RequestHandlers" level="warn" />
+
+        <Logger name="org.apache.solr.handler.loader.XMLLoader" level="warn" />
+
+        <Logger name="org.apache.solr.handler.component.SpellCheckComponent" level="warn" />
+
+        <Logger name="org.apache.solr.spelling.DirectSolrSpellChecker" level="warn" />
+
+        <Logger name="org.apache.solr.response.XSLTResponseWriter" level="warn" />
+
+        <!-- Starting in SOLR 7.4.0, org.eclipse.jetty logs way too much at debug level -->
+        <Logger name="org.eclipse.jetty" level="info" />
+
+        <!-- ConfigSecretsClient brings in the dependencies below, and they can log secrets to disk -->
+        <Logger name="org.springframework" level="info" />
+        <Logger name="org.apache.http.wire" level="info" />
+        <Logger name="org.apache.http.headers" level="info" />
+
+
+        <Logger name="org.apache.solr.update.processor.LogUpdateProcessor" level="warn" />
+
+        <Logger name="org.apache.solr.update.LoggingInfoStream" level="warn" />
+
+        <Logger name="org.apache.solr.search.SolrIndexSearcher" level="warn" />
+
+        <Logger name="org.apache.solr.cloud.SyncStrategy" level="warn" />
+
+        <Logger name="org.apache.solr.update.UpdateHandler" level="warn" />
+
+        <Root level="info">
+            <AppenderRef ref="${appender.name}"/>
+        </Root>
+    </Loggers>
+</Configuration>

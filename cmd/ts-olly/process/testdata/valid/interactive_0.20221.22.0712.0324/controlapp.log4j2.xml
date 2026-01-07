@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration monitorInterval="30" shutdownHook="disable">
+    <Appenders>
+        <RollingFile
+            name="dailyFile"
+            fileName="/var/opt/tableau/tableau_server/data/tabsvc/logs/interactive/control_interactive_node1-0.log"
+            filePattern="/var/opt/tableau/tableau_server/data/tabsvc/logs/interactive/control_interactive_node1-0.log.%d{yyyy-MM-dd}"
+            immediateFlush="true">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS Z}{UTC} %X{PID} %t : %-5level %c - %m%n"/>
+
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1"/>
+            </Policies>
+        </RollingFile>
+        <Console name="standardOut">
+            <ThresholdFilter level="ERROR" />
+            <PatternLayout pattern="\t%-5level %c - %m%n"/>
+        </Console>
+    </Appenders>
+
+    <Loggers>
+        <Logger name="com.tableausoftware" level="info" />
+        <Logger name="com.tableau" level="info" />
+        <Logger name="com.tableau.grpc.interceptors.logging" level="warn" />
+        <Logger name="com.tableausoftware.service.discovery" level="info" />
+
+        <!-- 3rd party Loggers -->
+        <Logger name="org.apache" level="info" />
+        <Logger name="oshi" level="info" />
+        <Logger name="org.hibernate" level="info" />
+        <Logger name="io.grpc.netty" level="info" />
+        <Logger name="io.netty" level="info" />
+
+        <!-- ConfigSecretsClient brings in the dependencies below, and they can log secrets to disk -->
+        <Logger name="org.springframework" level="info" />
+        <Logger name="org.apache.http.wire" level="info" />
+        <Logger name="org.apache.http.headers" level="info" />
+
+        <Root level="info">
+            <AppenderRef ref="dailyFile"/>
+            <AppenderRef ref="standardOut"/>
+        </Root>
+    </Loggers>
+</Configuration>

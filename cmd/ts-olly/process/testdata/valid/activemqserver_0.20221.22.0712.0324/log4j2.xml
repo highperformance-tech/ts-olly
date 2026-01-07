@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration monitorInterval="30" shutdownHook="disable">
+    <Properties>
+        <Property name="appender.name">rollingFile</Property>
+        <Property name="log.dir">/var/opt/tableau/tableau_server/data/tabsvc/logs/activemqserver</Property>
+        <Property name="log.file.name">activemqserver_node1-0.log</Property>
+        <Property name="log.file.path">/var/opt/tableau/tableau_server/data/tabsvc/logs/activemqserver/activemqserver_node1-0.log</Property>
+        <Property name="log.format">%d{yyyy-MM-dd HH:mm:ss.SSS Z}{UTC} (%X{siteName},%X{userName},%X{wgsessionid},%X{requestId},%X{localRequestId}) %t %X{serviceName}: %-5p %c - %m%n</Property>
+    </Properties>
+    <!-- Appenders -->
+    <Appenders>
+        <RollingFile name="rollingFile"
+                     fileName="${log.file.path}"
+                     filePattern="${log.file.path}.%i">
+            <PatternLayout>
+                <Charset>UTF-8</Charset>
+                <Pattern>${log.format}</Pattern>
+            </PatternLayout>
+            <Policies>
+                <SizeBasedTriggeringPolicy size="10MB" />
+            </Policies>
+            <DefaultRolloverStrategy max="5" />
+        </RollingFile>
+    </Appenders>
+
+    <Loggers>
+        <Logger name="org.apache.activemq" level="warn" />
+
+        <Root level="warn">
+            <AppenderRef ref="${appender.name}"/>
+        </Root>
+    </Loggers>
+</Configuration>

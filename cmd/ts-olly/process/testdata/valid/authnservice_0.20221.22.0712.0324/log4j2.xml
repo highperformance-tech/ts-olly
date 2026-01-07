@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration monitorInterval="30" shutdownHook="disable">
+    <Properties>
+        <Property name="log.dir">/var/opt/tableau/tableau_server/data/tabsvc/logs/authnservice</Property>
+        <Property name="log.file.name">authnservice_node1-0.log</Property>
+        <Property name="log.file.path">/var/opt/tableau/tableau_server/data/tabsvc/logs/authnservice/authnservice_node1-0.log</Property>
+        <Property name="log.format">%d{yyyy-MM-dd HH:mm:ss.SSS Z}{UTC} (%X{siteName},%X{userName},%X{wgsessionid},%X{requestId},%X{localRequestId}) %t %X{serviceName}: %-5p %c - %m%n</Property>
+        <Property name="rotate.size">10MB</Property>
+        <Property name="rotate.count">1</Property>
+        <Property name="buffer.size">4096</Property>
+        <Property name="discovery.log.file.path">/var/opt/tableau/tableau_server/data/tabsvc/logs/authnservice/authnservice-discovery_node1-0.log</Property>
+        <Property name="discovery.log.format">%d{yyyy-MM-dd HH:mm:ss.SSS Z}{UTC} (%X{siteName},%X{userName},%X{wgsessionid},%X{requestId},%X{localRequestId}) %t %X{serviceName}: %-5p %c - %m%n</Property>
+        <Property name="odp.metrics.file.path">/var/opt/tableau/tableau_server/data/tabsvc/logs/authnservice/authnservice-metrics_node1-0.log</Property>
+    </Properties>
+    <!-- Appenders -->
+    <Appenders>
+        <RollingFile name="dailyFile"
+                     fileName="${log.file.path}"
+                     filePattern="${log.file.path}.%d{yyyy-MM-dd}">
+            <PatternLayout>
+                <Charset>UTF-8</Charset>
+                <Pattern>${log.format}</Pattern>
+            </PatternLayout>
+            <Policies>
+                <TimeBasedTriggeringPolicy />
+            </Policies>
+        </RollingFile>
+        <RollingFile name="dailyFileDiscoveryService"
+                     fileName="${discovery.log.file.path}"
+                     filePattern="${discovery.log.file.path}.%d{yyyy-MM-dd}">
+            <PatternLayout>
+                <Charset>UTF-8</Charset>
+                <Pattern>${log.format}</Pattern>
+            </PatternLayout>
+            <Policies>
+                <TimeBasedTriggeringPolicy />
+            </Policies>
+        </RollingFile>
+
+
+
+
+        <RollingFile
+            name="ODPMetricsFile"
+            fileName="${odp.metrics.file.path}"
+            filePattern="${odp.metrics.file.path}.%d{yyyy-MM-dd-HH}"
+            immediateFlush="true">
+            <PatternLayout>
+                <Charset>UTF-8</Charset>
+                <Pattern>%m%n</Pattern>
+            </PatternLayout>
+            <Policies>
+                <TimeBasedTriggeringPolicy />
+            </Policies>
+            <DefaultRolloverStrategy>
+                <Delete basePath="${log.dir}" maxDepth="1">
+                    <IfFileName glob="${odp.metrics.file.path}.*" />
+                    <IfLastModified age="PT2H" />
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+    </Appenders>
+
+<!-- Define service name and log level mapping for services which need to adjust log level independently. -->
+  
+    <Loggers>
+            <Logger name="com.tableausoftware" level="info" />
+            <Logger name="com.tableau" level="info" />
+
+        <!-- Instrumentation loggers -->
+        <Logger name="com.tableausoftware.newrelic" level="info" />
+
+        <!-- Define logger for service discovery service and break the inheritance chain to not inherit from other appenders and loggers -->
+        <Logger name="com.tableau.discovery" additivity="false" level="info" >
+            <AppenderRef ref="dailyFileDiscoveryService" />
+        </Logger>
+        <Logger name="com.tableau.grpc.interceptors.logging" additivity="false" level="warn" >
+            <AppenderRef ref="dailyFileDiscoveryService" />
+        </Logger>
+
+        <!-- Metrics loggers -->
+        <Logger name="odp.metrics" additivity="false" level="false" >
+            <AppenderRef ref="ODPMetricsFile" />
+        </Logger>
+
+        <!-- 3rd party Loggers -->
+        <Logger name="org.apache.activemq" level="info" />
+        <Logger name="org.springframework.core" level="info" />
+        <Logger name="org.springframework.beans" level="info" />
+        <Logger name="org.springframework.context" level="info" />
+        <Logger name="org.springframework.web" level="info" />
+        <Logger name="io.grpc.netty" level="info" />
+        <Logger name="graphql" level="fatal" />
+
+
+        <Root level="warn">
+            <AppenderRef ref="dailyFile" />
+        </Root>
+    </Loggers>
+</Configuration>

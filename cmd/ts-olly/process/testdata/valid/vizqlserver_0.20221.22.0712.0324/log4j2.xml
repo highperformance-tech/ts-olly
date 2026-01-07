@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration monitorInterval="30" shutdownHook="disable">
+    <Properties>
+        <Property name="appender.name">dailyFile</Property>
+        <Property name="log.dir">/var/opt/tableau/tableau_server/data/tabsvc/logs/vizqlserver</Property>
+        <Property name="log.file.name">vizqlserver_node1-0.log</Property>
+        <Property name="log.file.path">/var/opt/tableau/tableau_server/data/tabsvc/logs/vizqlserver/vizqlserver_node1-0.log</Property>
+        <Property name="instrumentation.log.file.name">vizqlserver-instrumentation-metrics_node1-0.log</Property>
+        <Property name="instrumentation.log.file.path">/var/opt/tableau/tableau_server/data/tabsvc/logs/vizqlserver/vizqlserver-instrumentation-metrics_node1-0.log</Property>
+        <Property name="log.format">%d{yyyy-MM-dd HH:mm:ss.SSS Z}{UTC} (%X{siteName},%X{userName},%X{vqlsessionid},%X{requestId}) %t : %-5p wgsessionId=%X{wgsessionid} %c - %m%n</Property>
+        <Property name="rotate.size">10MB</Property>
+        <Property name="rotate.count">1</Property>
+        <Property name="buffer.size">4096</Property>
+        <Property name="odp.metrics.file.path">/var/opt/tableau/tableau_server/data/tabsvc/logs/vizqlserver/vizqlserver-metrics_node1-0.log</Property>
+    </Properties>
+    <!-- Appenders -->
+    <Appenders>
+        <RollingFile name="dailyFile"
+                     fileName="${log.file.path}"
+                     filePattern="${log.file.path}.%d{yyyy-MM-dd}">
+            <PatternLayout>
+                <Charset>UTF-8</Charset>
+                <Pattern>${log.format}</Pattern>
+            </PatternLayout>
+            <Policies>
+                <TimeBasedTriggeringPolicy />
+            </Policies>
+        </RollingFile>
+
+        <RollingFile name="dailyFileInstrumentationAppender"
+                     fileName="${instrumentation.log.file.path}"
+                     filePattern="${instrumentation.log.file.path}.%d{yyyy-MM-dd}">
+            <PatternLayout>
+                <Charset>UTF-8</Charset>
+                <Pattern>${log.format}</Pattern>
+            </PatternLayout>
+            <Policies>
+                <TimeBasedTriggeringPolicy />
+            </Policies>
+        </RollingFile>
+
+
+
+
+        <RollingFile name="rollingcappedfileforclient"
+                     fileName="/var/opt/tableau/tableau_server/data/tabsvc/logs/vizqlserver/vizql-client-0.log"
+                     filePattern="/var/opt/tableau/tableau_server/data/tabsvc/logs/vizqlserver/vizql-client-0.log.%i">
+            <PatternLayout>
+                <Pattern>%d{yyyy-MM-dd HH:mm:ss.SSS Z}{UTC} (%X{siteName},%X{userName},%X{vqlsessionid},%X{requestId}) %t : %-5p wgsessionId=%X{wgsessionid} %c - %m%n</Pattern>
+            </PatternLayout>
+            <Policies>
+                <SizeBasedTriggeringPolicy size="10MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="1"/>
+        </RollingFile>
+
+        <RollingFile
+            name="ODPMetricsFile"
+            fileName="${odp.metrics.file.path}"
+            filePattern="${odp.metrics.file.path}.%d{yyyy-MM-dd-HH}"
+            immediateFlush="true">
+            <PatternLayout>
+                <Charset>UTF-8</Charset>
+                <Pattern>%m%n</Pattern>
+            </PatternLayout>
+            <Policies>
+                <TimeBasedTriggeringPolicy />
+            </Policies>
+            <DefaultRolloverStrategy>
+                <Delete basePath="${log.dir}" maxDepth="1">
+                    <IfFileName glob="${odp.metrics.file.path}.*" />
+                    <IfLastModified age="PT2H" />
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+    </Appenders>
+
+    <Loggers>
+        <Logger name="com.tableausoftware" level="info" />
+        <Logger name="com.tableau" level="info" />
+        <Logger name="com.tableausoftware.service.discovery" level="info" />
+        <Logger name="com.tableau.grpc.interceptors.logging" level="warn" />
+
+        <Logger name="com.tableau.siteisolation" level="INFO" />
+
+        <Logger name="VizqlClient" additivity="false" level="info" >
+            <AppenderRef ref="rollingcappedfileforclient" />
+        </Logger>
+
+        <!-- Metrics loggers -->
+        <Logger name="odp.metrics" additivity="false" level="false" >
+            <AppenderRef ref="ODPMetricsFile" />
+        </Logger>
+
+        <!-- 3rdparty Loggers -->
+        <Logger name="org.apache.solr.client.solrj.impl.CloudSolrClient" level="info" additivity="false" >
+            <RegexFilter regex=".* version conflict for .*" onMatch="DENY" onMismatch="NEUTRAL" />
+        </Logger>
+        <Logger name="org.springframework.core" level="info" />
+        <Logger name="org.springframework.beans" level="info" />
+        <Logger name="org.springframework.context" level="info" />
+        <Logger name="org.springframework.web" level="info" />
+        <Logger name="io.grpc.netty" level="info" />
+        <Logger name="com.tableausoftware.controller.vizql.TrustedController" level="info" />
+        <Logger name="com.tableausoftware.model.workgroup.service.TrustedTicketServiceImpl" level="info" />
+        <Logger name="com.tableausoftware.model.workgroup.jpa.TrustedTicketDaoJpa" level="info" />
+
+
+        <Logger name="com.tableausoftware.newrelic.jmx" additivity="false" level="info" >
+            <AppenderRef ref="${appender.name}InstrumentationAppender" />
+        </Logger>
+
+        <Root level="warn">
+            <AppenderRef ref="${appender.name}"/>
+        </Root>
+    </Loggers>
+</Configuration>

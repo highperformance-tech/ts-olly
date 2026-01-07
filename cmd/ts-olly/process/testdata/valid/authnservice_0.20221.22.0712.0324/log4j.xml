@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE log4j:configuration PUBLIC "-//LOGGER" "log4j.dtd">
+
+<log4j:configuration xmlns:log4j="http://jakarta.apache.org/log4j/">
+
+    <!-- Appenders -->
+    <appender name="dailyFile" class="org.apache.log4j.DailyRollingFileAppender">
+        <param name="File" value="${logfile}" />
+        <param name="encoding" value="UTF-8" />
+        <param name="DatePattern" value="'.'yyyy-MM-dd" />
+        <layout class="org.apache.log4j.EnhancedPatternLayout">
+            <param name="ConversionPattern" value="%d{yyyy-MM-dd HH:mm:ss.SSS Z}{UTC} (%X{siteName},%X{userName},%X{wgsessionid},%X{requestId},%X{localRequestId}) %t %X{serviceName}: %-5p %c - %m%n" />
+        </layout>
+    </appender>
+
+    <appender name="rollingFile" class="org.apache.log4j.RollingFileAppender">
+        <param name="File" value="${logfile}" />
+        <param name="encoding" value="UTF-8" />
+        <param name="MaxFileSize" value="10MB" />
+        <param name="MaxBackupIndex" value="1" />
+        <layout class="org.apache.log4j.EnhancedPatternLayout">
+            <param name="ConversionPattern" value="%d{yyyy-MM-dd HH:mm:ss.SSS Z}{UTC} (%X{siteName},%X{userName},%X{wgsessionid},%X{requestId},%X{localRequestId}) %t %X{serviceName}: %-5p %c - %m%n" />
+        </layout>
+    </appender>
+
+    <appender name="rollingBufferedFile" class="org.apache.log4j.RollingFileAppender">
+        <param name="File" value="${logfile}" />
+        <param name="encoding" value="UTF-8" />
+        <param name="MaxFileSize" value="10MB" />
+        <param name="MaxBackupIndex" value="1" />
+        <param name="BufferedIO" value="true" />
+        <param name="BufferSize" value="4096" />
+        <layout class="org.apache.log4j.EnhancedPatternLayout">
+            <param name="ConversionPattern" value="%d{yyyy-MM-dd HH:mm:ss.SSS Z}{UTC} (%X{siteName},%X{userName},%X{wgsessionid},%X{requestId},%X{localRequestId}) %t %X{serviceName}: %-5p %c - %m%n" />
+        </layout>
+    </appender>
+
+    <appender name="asyncFile" class="org.apache.log4j.AsyncAppender">
+       <param name="BufferSize" value="512" />
+       <appender-ref ref="rollingBufferedFile" />
+    </appender>
+
+
+    <!-- Application Loggers -->
+    <logger name="com.tableausoftware">
+        <level value="info" />
+    </logger>
+
+    <logger name="com.tableau">
+        <level value="info" />
+    </logger>
+
+    <!-- Instrumentation loggers -->
+    <logger name="com.tableausoftware.newrelic">
+        <level value="info" />
+    </logger>
+
+    <logger name="com.tableausoftware.service.discovery">
+        <level value="info" />
+    </logger>
+
+    <logger name="com.tableau.grpc.interceptors.logging">
+        <level value="warn" />
+    </logger>
+
+    <!-- 3rdparty Loggers -->
+    <logger name="org.apache.activemq">
+        <level value="info" />
+    </logger>
+
+    <logger name="org.springframework.core">
+        <level value="info" />
+    </logger>
+
+    <logger name="org.springframework.beans">
+        <level value="info" />
+    </logger>
+
+    <logger name="org.springframework.context">
+        <level value="info" />
+    </logger>
+
+    <logger name="org.springframework.web">
+        <level value="info" />
+    </logger>
+
+    <logger name="io.grpc.netty">
+        <level value="info" />
+    </logger>
+
+
+    <!-- Root Logger -->
+    <root>
+        <priority value="warn" />
+        <appender-ref ref="dailyFile" />
+    </root>
+
+</log4j:configuration>

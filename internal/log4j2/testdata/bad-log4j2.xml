@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration monitorInterval="30" shutdownHook="disable">
+    <Properties>
+        <Property name="discovery.log.file.path">/var/opt/tableau/tableau_server/data/tabsvc/logs/activationservice/activationservice-discovery_node1-0.log</Property>
+        <Property name="discovery.log.format">%d{yyyy-MM-dd HH:mm:ss.SSS Z}{UTC} (%X{siteName},%X{userName},%X{wgsessionid},%X{requestId},%X{localRequestId}) %t %X{serviceName}: %-5p %c - %m%n</Property>
+        <Property name="odp.metrics.file.path">/var/opt/tableau/tableau_server/data/tabsvc/logs/activationservice/activationservice-metrics_node1-0.log</Property>
+    </Properties>
+
+    <Appenders>
+
+        <Rolling

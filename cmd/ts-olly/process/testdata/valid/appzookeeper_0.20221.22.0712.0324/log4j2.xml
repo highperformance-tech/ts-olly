@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration monitorInterval="30" shutdownHook="disable">
+    <Properties>
+        <Property name="discovery.log.file.path">/var/opt/tableau/tableau_server/data/tabsvc/logs/appzookeeper/appzookeeper-discovery_node1-0.log</Property>
+        <Property name="discovery.log.format">%d{yyyy-MM-dd HH:mm:ss.SSS Z}{UTC} (%X{siteName},%X{userName},%X{wgsessionid},%X{requestId},%X{localRequestId}) %t %X{serviceName}: %-5p %c - %m%n</Property>
+        <Property name="odp.metrics.file.path">/var/opt/tableau/tableau_server/data/tabsvc/logs/appzookeeper/appzookeeper-metrics_node1-0.log</Property>
+    </Properties>
+
+    <Appenders>
+        <RollingFile
+            name="dailyFile"
+            fileName="/var/opt/tableau/tableau_server/data/tabsvc/logs/appzookeeper/appzookeeper_node1-0.log"
+            filePattern="/var/opt/tableau/tableau_server/data/tabsvc/logs/appzookeeper/appzookeeper_node1-0.log.%d{yyyy-MM-dd}"
+            immediateFlush="true">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS Z}{UTC} %X{PID} %t : %-5level %c - %m%n"/>
+
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1"/>
+            </Policies>
+        </RollingFile>
+
+        <RollingFile
+            name="dailyFileDiscoveryService"
+            fileName="${discovery.log.file.path}"
+            filePattern="${discovery.log.file.path}.%d{yyyy-MM-dd}"
+            immediateFlush="true">
+            <PatternLayout pattern="${discovery.log.format}"/>
+
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1"/>
+            </Policies>
+        </RollingFile>
+
+        <RollingFile
+            name="ODPMetricsFile"
+            fileName="${odp.metrics.file.path}"
+            filePattern="${odp.metrics.file.path}.%d{yyyy-MM-dd-HH}"
+            immediateFlush="true">
+            <PatternLayout>
+                <Charset>UTF-8</Charset>
+                <Pattern>%m%n</Pattern>
+            </PatternLayout>
+            <Policies>
+                <TimeBasedTriggeringPolicy />
+            </Policies>
+            <DefaultRolloverStrategy>
+                <Delete basePath="${log.dir}" maxDepth="1">
+                    <IfFileName glob="${odp.metrics.file.path}.*" />
+                    <IfLastModified age="PT2H" />
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+    </Appenders>
+
+    <Loggers>
+        <Logger name="com.tableausoftware" level="info" />
+        <Logger name="com.tableau" level="info" />
+
+        <!-- Define logger for service discovery and break the inheritance chain to not inherit from other appenders and loggers -->
+        <Logger name="com.tableau.discovery" additivity="false" level="info" >
+            <AppenderRef ref="dailyFileDiscoveryService" />
+        </Logger>
+        <Logger name="com.tableau.grpc.interceptors.logging" additivity="false" level="warn" >
+            <AppenderRef ref="dailyFileDiscoveryService" />
+        </Logger>
+        <Logger name="com.tableausoftware.service.discovery" additivity="false" level="info" >
+            <AppenderRef ref="dailyFileDiscoveryService" />
+        </Logger>
+        <Logger name="com.tableausoftware.tabadmin.agent.registry" additivity="false" level="info" >
+            <AppenderRef ref="dailyFileDiscoveryService" />
+        </Logger>
+        <Logger name="com.tableau.grpc.discovery" additivity="false" level="info" >
+            <AppenderRef ref="dailyFileDiscoveryService" />
+        </Logger>
+
+        <!-- Metrics loggers -->
+        <Logger name="odp.metrics" additivity="false" level="false" >
+            <AppenderRef ref="ODPMetricsFile" />
+        </Logger>
+
+        <!-- 3rd party Loggers -->
+        <Logger name="org.apache" level="info" />
+        <Logger name="org.eclipse.jetty" level="info" />
+        <Logger name="org.springframework" level="info" />
+        <Logger name="oshi" level="info" />
+        <Logger name="org.apache.zookeeper.server.NIOServerCnxnFactory" level="warn" />
+        <Logger name="org.hibernate" level="info" />
+        <Logger name="io.grpc.netty" level="info" />
+        <Logger name="io.netty" level="info" />
+
+        <Root level="info">
+            <AppenderRef ref="dailyFile"/>
+        </Root>
+    </Loggers>
+</Configuration>

@@ -1,0 +1,57 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: ts-olly
+    main: ./cmd/ts-olly
+    binary: ts-olly
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+    ldflags:
+      - -s -w
+
+archives:
+  - id: ts-olly
+    ids:
+      - ts-olly
+    formats:
+      - tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+
+dockers_v2:
+  - id: ts-olly
+    ids:
+      - ts-olly
+    dockerfile: Dockerfile
+    images:
+      - "ghcr.io/highperformance-tech/ts-olly"
+    tags:
+      - "{{ .Version }}"
+      - "latest"
+    platforms:
+      - linux/amd64
+
+release:
+  github:
+    owner: highperformance-tech
+    name: ts-olly
+  draft: false
+  prerelease: auto

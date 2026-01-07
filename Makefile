@@ -58,16 +58,19 @@ build/darwin: bin
 	GOOS=darwin GOARCH=amd64 go build -o=./bin/darwin_amd64/ts-olly ./cmd/ts-olly
 
 # Containerize
-## container: build a docker image for the ts-olly application
+## container: build a docker image for the ts-olly application using goreleaser
 .PHONY: container
 container:
 	@echo 'Building docker image for ts-olly...'
-	docker build -t ghcr.io/highperformance-tech/ts-olly:latest .
-
-.PHONY: container/push
-container/push:
-	@echo 'Pushing docker image for ts-olly...'
-	docker push ghcr.io/highperformance-tech/ts-olly:latest
+	goreleaser release --snapshot --clean --skip=publish
 
 bin:
 	mkdir -p bin
+
+# Release
+## release-local: test goreleaser configuration locally (no publish)
+.PHONY: release-local
+release-local:
+	@echo 'Testing GoReleaser configuration...'
+	goreleaser check
+	goreleaser release --snapshot --clean

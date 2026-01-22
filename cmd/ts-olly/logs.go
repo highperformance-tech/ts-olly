@@ -3,12 +3,8 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/VictoriaMetrics/metrics"
-	"github.com/fsnotify/fsnotify"
-	"github.com/highperformance-tech/ts-olly/cmd/ts-olly/process"
-	"github.com/highperformance-tech/ts-olly/internal/pipeline"
-	"github.com/nxadm/tail"
 	"io"
 	"io/fs"
 	"os"
@@ -18,6 +14,12 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/VictoriaMetrics/metrics"
+	"github.com/fsnotify/fsnotify"
+	"github.com/highperformance-tech/ts-olly/cmd/ts-olly/process"
+	"github.com/highperformance-tech/ts-olly/internal/pipeline"
+	"github.com/nxadm/tail"
 )
 
 type event struct {
@@ -72,12 +74,27 @@ func (app *application) logs(ctx context.Context) <-chan line {
 	// Create a map for storing/getting whether we are tailing a given fileId
 	tailing := &sync.Map{}
 
-	// Initialize watcher
+	// Create a map for storing pending files awaiting config directory creation
+	pendingFiles := &sync.Map{}
+
+	// Initialize watcher for logs directory
 	w, err := fsnotify.NewWatcher()
 	if err != nil {
 		app.logger.Fatal().Err(err)
 	}
 	app.watcher = w
+
+	// Initialize watcher for config directory to detect new process instances
+	configWatcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		app.logger.Fatal().Err(err)
+	}
+
+	// Channel for retrying pending files when config directories appear
+	retryFileCh := make(chan event, 100)
+
+	// Start config directory watcher goroutine
+	go app.watchConfigDir(ctx, configWatcher, pendingFiles, retryFileCh)
 
 	// Recursively watch the data directory and inventory its files
 	walkDirFunc := func(path string, d fs.DirEntry, err error) error {
@@ -115,13 +132,16 @@ func (app *application) logs(ctx context.Context) <-chan line {
 	// Separate the events into files and directories
 	files, dirs := pipeline.FilterFunc(ctx, actionableEvents, separateFilesAndDirs)
 
-	//Handle directories
+	// Handle directories - scan for existing files and emit synthetic events
 	dirsCounter := metrics.NewCounter("tslogs_dir_events_total")
-	pipeline.SinkFunc(ctx, dirs, handleDirs(w, dirsCounter))
+	dirFiles := pipeline.DecomposerFunc(ctx, dirs, handleDirs(app, w, dirsCounter))
+
+	// Merge directory-discovered files with directly-detected files and retry channel
+	allFiles := pipeline.Merge(ctx, files, dirFiles, retryFileCh)
 
 	// Handle files
 	filesCounter := metrics.NewCounter("tslogs_file_events_total")
-	tails := pipeline.TransformerFunc(ctx, files, handleFiles(app, tailing, seekInfoCache, filesCounter))
+	tails := pipeline.TransformerFunc(ctx, allFiles, handleFiles(app, tailing, seekInfoCache, pendingFiles, filesCounter))
 
 	// Filter empty tails
 	tails, _ = pipeline.FilterFunc(ctx, tails, func(ctx context.Context, t tailedFile) bool {
@@ -189,14 +209,42 @@ func separateFilesAndDirs(_ context.Context, e event) bool {
 	return true
 }
 
-func handleDirs(w *fsnotify.Watcher, counter *metrics.Counter) func(context.Context, event) {
-	return func(ctx context.Context, e event) {
+func handleDirs(app *application, w *fsnotify.Watcher, counter *metrics.Counter) func(event) []event {
+	return func(e event) []event {
 		counter.Inc()
-		_ = w.Add(e.Name) // If there was an error adding the directory, we'd return false anyway
+		if err := w.Add(e.Name); err != nil {
+			app.logger.Warn().Err(err).Str("directory", e.Name).Msg("failed to add directory to watcher")
+			return nil
+		}
+
+		// Scan directory for existing files and return synthetic events
+		entries, err := os.ReadDir(e.Name)
+		if err != nil {
+			app.logger.Warn().Err(err).Str("directory", e.Name).Msg("failed to read directory")
+			return nil
+		}
+
+		var fileEvents []event
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue // Only handle files; nested dirs will get their own events
+			}
+			filePath := filepath.Join(e.Name, entry.Name())
+			fid, err := getFileId(filePath)
+			if err != nil {
+				app.logger.Debug().Err(err).Str("file", filePath).Msg("failed to get file ID")
+				continue
+			}
+			fileEvents = append(fileEvents, event{
+				Event:  fsnotify.Event{Name: filePath, Op: fsnotify.Create},
+				fileId: fid,
+			})
+		}
+		return fileEvents
 	}
 }
 
-func handleFiles(app *application, tailing *sync.Map, seekInfoCache *sync.Map, counter *metrics.Counter) func(context.Context, event) tailedFile {
+func handleFiles(app *application, tailing *sync.Map, seekInfoCache *sync.Map, pendingFiles *sync.Map, counter *metrics.Counter) func(context.Context, event) tailedFile {
 	return func(ctx context.Context, e event) tailedFile {
 		if _, ok := tailing.Load(e.fileId); ok { // If we're already tailing this file, skip this event
 			return tailedFile{}
@@ -222,6 +270,21 @@ func handleFiles(app *application, tailing *sync.Map, seekInfoCache *sync.Map, c
 		counter.Inc()
 		instance, err := process.For(processId, processName, app.config.configDir)
 		if err != nil {
+			// If config directory not found, add to pending files for retry when config appears
+			if errors.Is(err, process.ErrConfigDirNotFound) || errors.Is(err, process.ErrConfigFileNotFound) {
+				pendingFiles.Store(e.fileId, e)
+				pendingFilesCounter := metrics.GetOrCreateCounter("tslogs_pending_files_total")
+				pendingFilesCounter.Inc()
+				app.logger.Info().
+					Str("filename", t.Filename).
+					Int64("fileid", int64(e.fileId)).
+					Str("processname", processName).
+					Int64("processid", int64(processId)).
+					Str("configdir", app.config.configDir).
+					Msg("config not found for process instance. queued for retry when config appears")
+				t.Cleanup()
+				return tailedFile{}
+			}
 			app.logger.Err(err).
 				Str("filename", t.Filename).
 				Int64("fileid", int64(e.fileId)).
@@ -409,3 +472,107 @@ const (
 	complete
 	unknownCompleteness
 )
+
+// watchConfigDir monitors the config directory for new process instance directories.
+// When a new config directory appears (e.g., vizqlserver_1/), it checks if there are
+// pending log files waiting for that config and triggers a retry.
+func (app *application) watchConfigDir(ctx context.Context, watcher *fsnotify.Watcher, pendingFiles *sync.Map, retryCh chan<- event) {
+	defer watcher.Close()
+
+	configDir := app.config.configDir
+	if configDir == "" {
+		app.logger.Warn().Msg("config directory not specified, dynamic process discovery disabled")
+		return
+	}
+
+	// Add the config directory to the watcher
+	if err := watcher.Add(configDir); err != nil {
+		app.logger.Err(err).Str("configdir", configDir).Msg("could not watch config directory")
+		return
+	}
+	app.logger.Info().Str("configdir", configDir).Msg("watching config directory for new process instances")
+
+	configDirDiscoveryCounter := metrics.GetOrCreateCounter("tslogs_config_dir_discovery_total")
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case e, ok := <-watcher.Events:
+			if !ok {
+				return
+			}
+			// Only care about Create events for directories
+			if e.Op&fsnotify.Create != fsnotify.Create {
+				continue
+			}
+			fileInfo, err := os.Stat(e.Name)
+			if err != nil || !fileInfo.IsDir() {
+				continue
+			}
+
+			dirName := filepath.Base(e.Name)
+			app.logger.Info().
+				Str("directory", dirName).
+				Str("path", e.Name).
+				Msg("detected new config directory")
+			configDirDiscoveryCounter.Inc()
+
+			// Check if there are pending files for this process instance
+			// Recompute processName_processId from each file's metadata to find matches
+			// Collect matching entries first to avoid blocking the Range callback
+			var matchingEntries []struct {
+				fileId fileId
+				event  event
+			}
+			pendingFiles.Range(func(key, value interface{}) bool {
+				fid := key.(fileId)
+				pendingEvent := value.(event)
+
+				// Recompute processName and processId from the file path
+				processName := getProcessName(pendingEvent.Name, app.config.logsDir)
+				processId := getProcessId(filepath.Base(pendingEvent.Name))
+				pendingKey := fmt.Sprintf("%s_%d", processName, processId)
+
+				// Check if this config directory matches the pending process
+				// Must be exact match OR match with underscore suffix (for version suffixes like vizqlserver_1_abc123)
+				// This prevents vizqlserver_1 from matching vizqlserver_10
+				if dirName == pendingKey || strings.HasPrefix(dirName, pendingKey+"_") {
+					matchingEntries = append(matchingEntries, struct {
+						fileId fileId
+						event  event
+					}{fid, pendingEvent})
+				}
+				return true
+			})
+
+			// Process matching entries after Range completes
+			if len(matchingEntries) > 0 {
+				// Wait once for config files to be written
+				time.Sleep(500 * time.Millisecond)
+			}
+			for _, entry := range matchingEntries {
+				app.logger.Info().
+					Str("filename", entry.event.Name).
+					Int64("fileid", int64(entry.event.fileId)).
+					Str("configdir", dirName).
+					Msg("retrying log file after config directory appeared")
+
+				// Remove from pending and send to retry channel
+				pendingFiles.Delete(entry.fileId)
+				select {
+				case retryCh <- entry.event:
+				default:
+					app.logger.Warn().
+						Str("filename", entry.event.Name).
+						Msg("retry channel full, could not queue file for retry")
+				}
+			}
+		case err, ok := <-watcher.Errors:
+			if !ok {
+				return
+			}
+			app.logger.Err(err).Msg("config directory watcher error")
+		}
+	}
+}

@@ -84,7 +84,7 @@ func TestWatchConfigDirEmptyConfigDir(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer watcher.Close()
+	// Note: watcher is closed by watchConfigDir via defer
 
 	pendingFiles := &sync.Map{}
 	retryCh := make(chan event, 10)
@@ -128,7 +128,7 @@ func TestWatchConfigDirDetectsNewDirectory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer watcher.Close()
+	// Note: watcher is closed by watchConfigDir via defer
 
 	pendingFiles := &sync.Map{}
 	retryCh := make(chan event, 10)

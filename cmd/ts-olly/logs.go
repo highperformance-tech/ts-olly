@@ -473,6 +473,8 @@ const (
 // When a new config directory appears (e.g., vizqlserver_1/), it checks if there are
 // pending log files waiting for that config and triggers a retry.
 func (app *application) watchConfigDir(ctx context.Context, watcher *fsnotify.Watcher, pendingFiles *sync.Map, retryCh chan<- event) {
+	defer watcher.Close()
+
 	configDir := app.config.configDir
 	if configDir == "" {
 		app.logger.Warn().Msg("config directory not specified, dynamic process discovery disabled")
@@ -486,12 +488,11 @@ func (app *application) watchConfigDir(ctx context.Context, watcher *fsnotify.Wa
 	}
 	app.logger.Info().Str("configdir", configDir).Msg("watching config directory for new process instances")
 
-	configDirDiscoveryCounter := metrics.NewCounter("tslogs_config_dir_discovery_total")
+	configDirDiscoveryCounter := metrics.GetOrCreateCounter("tslogs_config_dir_discovery_total")
 
 	for {
 		select {
 		case <-ctx.Done():
-			watcher.Close()
 			return
 		case e, ok := <-watcher.Events:
 			if !ok {
@@ -515,6 +516,11 @@ func (app *application) watchConfigDir(ctx context.Context, watcher *fsnotify.Wa
 
 			// Check if there are pending files for this process instance
 			// The pending key format is "processName_processId"
+			// Collect matching entries first to avoid blocking the Range callback
+			var matchingEntries []struct {
+				key   string
+				event event
+			}
 			pendingFiles.Range(func(key, value interface{}) bool {
 				pendingKey := key.(string)
 				pendingEvent := value.(event)
@@ -523,27 +529,35 @@ func (app *application) watchConfigDir(ctx context.Context, watcher *fsnotify.Wa
 				// Must be exact match OR match with underscore suffix (for version suffixes like vizqlserver_1_abc123)
 				// This prevents vizqlserver_1 from matching vizqlserver_10
 				if dirName == pendingKey || strings.HasPrefix(dirName, pendingKey+"_") {
-					// Wait briefly for config files to be written
-					time.Sleep(500 * time.Millisecond)
-
-					app.logger.Info().
-						Str("filename", pendingEvent.Name).
-						Int64("fileid", int64(pendingEvent.fileId)).
-						Str("configdir", dirName).
-						Msg("retrying log file after config directory appeared")
-
-					// Remove from pending and send to retry channel
-					pendingFiles.Delete(key)
-					select {
-					case retryCh <- pendingEvent:
-					default:
-						app.logger.Warn().
-							Str("filename", pendingEvent.Name).
-							Msg("retry channel full, could not queue file for retry")
-					}
+					matchingEntries = append(matchingEntries, struct {
+						key   string
+						event event
+					}{pendingKey, pendingEvent})
 				}
 				return true
 			})
+
+			// Process matching entries after Range completes
+			for _, entry := range matchingEntries {
+				// Wait briefly for config files to be written
+				time.Sleep(500 * time.Millisecond)
+
+				app.logger.Info().
+					Str("filename", entry.event.Name).
+					Int64("fileid", int64(entry.event.fileId)).
+					Str("configdir", dirName).
+					Msg("retrying log file after config directory appeared")
+
+				// Remove from pending and send to retry channel
+				pendingFiles.Delete(entry.key)
+				select {
+				case retryCh <- entry.event:
+				default:
+					app.logger.Warn().
+						Str("filename", entry.event.Name).
+						Msg("retry channel full, could not queue file for retry")
+				}
+			}
 		case err, ok := <-watcher.Errors:
 			if !ok {
 				return

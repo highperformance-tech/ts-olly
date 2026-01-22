@@ -3,12 +3,8 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/VictoriaMetrics/metrics"
-	"github.com/fsnotify/fsnotify"
-	"github.com/highperformance-tech/ts-olly/cmd/ts-olly/process"
-	"github.com/highperformance-tech/ts-olly/internal/pipeline"
-	"github.com/nxadm/tail"
 	"io"
 	"io/fs"
 	"os"
@@ -18,6 +14,12 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/VictoriaMetrics/metrics"
+	"github.com/fsnotify/fsnotify"
+	"github.com/highperformance-tech/ts-olly/cmd/ts-olly/process"
+	"github.com/highperformance-tech/ts-olly/internal/pipeline"
+	"github.com/nxadm/tail"
 )
 
 type event struct {
@@ -132,7 +134,7 @@ func (app *application) logs(ctx context.Context) <-chan line {
 
 	// Handle directories - scan for existing files and emit synthetic events
 	dirsCounter := metrics.NewCounter("tslogs_dir_events_total")
-	dirFiles := pipeline.DecomposerFunc(ctx, dirs, handleDirs(w, dirsCounter))
+	dirFiles := pipeline.DecomposerFunc(ctx, dirs, handleDirs(app, w, dirsCounter))
 
 	// Merge directory-discovered files with directly-detected files and retry channel
 	allFiles := pipeline.Merge(ctx, files, dirFiles, retryFileCh)
@@ -207,16 +209,18 @@ func separateFilesAndDirs(_ context.Context, e event) bool {
 	return true
 }
 
-func handleDirs(w *fsnotify.Watcher, counter *metrics.Counter) func(event) []event {
+func handleDirs(app *application, w *fsnotify.Watcher, counter *metrics.Counter) func(event) []event {
 	return func(e event) []event {
 		counter.Inc()
 		if err := w.Add(e.Name); err != nil {
+			app.logger.Warn().Err(err).Str("directory", e.Name).Msg("failed to add directory to watcher")
 			return nil
 		}
 
 		// Scan directory for existing files and return synthetic events
 		entries, err := os.ReadDir(e.Name)
 		if err != nil {
+			app.logger.Warn().Err(err).Str("directory", e.Name).Msg("failed to read directory")
 			return nil
 		}
 
@@ -228,6 +232,7 @@ func handleDirs(w *fsnotify.Watcher, counter *metrics.Counter) func(event) []eve
 			filePath := filepath.Join(e.Name, entry.Name())
 			fid, err := getFileId(filePath)
 			if err != nil {
+				app.logger.Debug().Err(err).Str("file", filePath).Msg("failed to get file ID")
 				continue
 			}
 			fileEvents = append(fileEvents, event{
@@ -266,7 +271,7 @@ func handleFiles(app *application, tailing *sync.Map, seekInfoCache *sync.Map, p
 		instance, err := process.For(processId, processName, app.config.configDir)
 		if err != nil {
 			// If config directory not found, add to pending files for retry when config appears
-			if err == process.ErrConfigDirNotFound || err == process.ErrConfigFileNotFound {
+			if errors.Is(err, process.ErrConfigDirNotFound) || errors.Is(err, process.ErrConfigFileNotFound) {
 				pendingKey := fmt.Sprintf("%s_%d", processName, processId)
 				pendingFiles.Store(pendingKey, e)
 				pendingFilesCounter := metrics.GetOrCreateCounter("tslogs_pending_files_total")
@@ -538,10 +543,11 @@ func (app *application) watchConfigDir(ctx context.Context, watcher *fsnotify.Wa
 			})
 
 			// Process matching entries after Range completes
-			for _, entry := range matchingEntries {
-				// Wait briefly for config files to be written
+			if len(matchingEntries) > 0 {
+				// Wait once for config files to be written
 				time.Sleep(500 * time.Millisecond)
-
+			}
+			for _, entry := range matchingEntries {
 				app.logger.Info().
 					Str("filename", entry.event.Name).
 					Int64("fileid", int64(entry.event.fileId)).

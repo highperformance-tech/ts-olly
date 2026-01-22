@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -31,21 +32,12 @@ func TestPendingFilesKeyFormat(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.expectedKey, func(t *testing.T) {
 			// This is the same format used in handleFiles()
-			key := tt.processName + "_" + string('0'+tt.processId)
-			// For processId > 9, we need proper formatting
-			key = tt.processName + "_" + itoa(tt.processId)
+			key := fmt.Sprintf("%s_%d", tt.processName, tt.processId)
 			if key != tt.expectedKey {
 				t.Errorf("got key %q, want %q", key, tt.expectedKey)
 			}
 		})
 	}
-}
-
-func itoa(i uint8) string {
-	if i < 10 {
-		return string('0' + i)
-	}
-	return string('0'+i/10) + string('0'+i%10)
 }
 
 func TestConfigDirectoryMatching(t *testing.T) {

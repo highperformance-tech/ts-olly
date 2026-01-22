@@ -272,8 +272,7 @@ func handleFiles(app *application, tailing *sync.Map, seekInfoCache *sync.Map, p
 		if err != nil {
 			// If config directory not found, add to pending files for retry when config appears
 			if errors.Is(err, process.ErrConfigDirNotFound) || errors.Is(err, process.ErrConfigFileNotFound) {
-				pendingKey := fmt.Sprintf("%s_%d", processName, processId)
-				pendingFiles.Store(pendingKey, e)
+				pendingFiles.Store(e.fileId, e)
 				pendingFilesCounter := metrics.GetOrCreateCounter("tslogs_pending_files_total")
 				pendingFilesCounter.Inc()
 				app.logger.Info().
@@ -520,24 +519,29 @@ func (app *application) watchConfigDir(ctx context.Context, watcher *fsnotify.Wa
 			configDirDiscoveryCounter.Inc()
 
 			// Check if there are pending files for this process instance
-			// The pending key format is "processName_processId"
+			// Recompute processName_processId from each file's metadata to find matches
 			// Collect matching entries first to avoid blocking the Range callback
 			var matchingEntries []struct {
-				key   string
-				event event
+				fileId fileId
+				event  event
 			}
 			pendingFiles.Range(func(key, value interface{}) bool {
-				pendingKey := key.(string)
+				fid := key.(fileId)
 				pendingEvent := value.(event)
+
+				// Recompute processName and processId from the file path
+				processName := getProcessName(pendingEvent.Name, app.config.logsDir)
+				processId := getProcessId(filepath.Base(pendingEvent.Name))
+				pendingKey := fmt.Sprintf("%s_%d", processName, processId)
 
 				// Check if this config directory matches the pending process
 				// Must be exact match OR match with underscore suffix (for version suffixes like vizqlserver_1_abc123)
 				// This prevents vizqlserver_1 from matching vizqlserver_10
 				if dirName == pendingKey || strings.HasPrefix(dirName, pendingKey+"_") {
 					matchingEntries = append(matchingEntries, struct {
-						key   string
-						event event
-					}{pendingKey, pendingEvent})
+						fileId fileId
+						event  event
+					}{fid, pendingEvent})
 				}
 				return true
 			})
@@ -555,7 +559,7 @@ func (app *application) watchConfigDir(ctx context.Context, watcher *fsnotify.Wa
 					Msg("retrying log file after config directory appeared")
 
 				// Remove from pending and send to retry channel
-				pendingFiles.Delete(entry.key)
+				pendingFiles.Delete(entry.fileId)
 				select {
 				case retryCh <- entry.event:
 				default:

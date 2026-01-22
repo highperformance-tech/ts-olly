@@ -119,6 +119,7 @@ func TestWatchConfigDirDetectsNewDirectory(t *testing.T) {
 	app := &application{
 		config: config{
 			configDir: tmpDir,
+			logsDir:   "/var/logs",
 		},
 		logger: logger,
 	}
@@ -134,10 +135,10 @@ func TestWatchConfigDirDetectsNewDirectory(t *testing.T) {
 
 	// Add a pending file for vizqlserver_1
 	pendingEvent := event{
-		Event:  fsnotify.Event{Name: "/var/logs/vizqlserver/test.log", Op: fsnotify.Create},
+		Event:  fsnotify.Event{Name: "/var/logs/vizqlserver/vizqlserver_1.log", Op: fsnotify.Create},
 		fileId: 12345,
 	}
-	pendingFiles.Store("vizqlserver_1", pendingEvent)
+	pendingFiles.Store(fileId(12345), pendingEvent)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -167,7 +168,7 @@ func TestWatchConfigDirDetectsNewDirectory(t *testing.T) {
 	}
 
 	// Verify the pending file was removed
-	if _, ok := pendingFiles.Load("vizqlserver_1"); ok {
+	if _, ok := pendingFiles.Load(fileId(12345)); ok {
 		t.Error("pending file was not removed after retry")
 	}
 }

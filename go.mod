@@ -3,7 +3,7 @@ module github.com/highperformance-tech/ts-olly
 go 1.25
 
 require (
-	github.com/VictoriaMetrics/metrics v1.40.2
+	github.com/VictoriaMetrics/metrics v1.41.2
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/go-viper/encoding/javaproperties v0.1.0
 	github.com/nxadm/tail v1.4.11

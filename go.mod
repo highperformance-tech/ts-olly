@@ -1,6 +1,6 @@
 module github.com/highperformance-tech/ts-olly
 
-go 1.25
+go 1.25.0
 
 require (
 	github.com/VictoriaMetrics/metrics v1.41.2
@@ -10,7 +10,7 @@ require (
 	github.com/rs/zerolog v1.34.0
 	github.com/spf13/viper v1.21.0
 	github.com/timtadh/lexmachine v0.2.3
-	golang.org/x/sys v0.41.0
+	golang.org/x/sys v0.42.0
 )
 
 require (

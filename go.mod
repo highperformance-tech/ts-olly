@@ -7,7 +7,7 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/go-viper/encoding/javaproperties v0.1.0
 	github.com/nxadm/tail v1.4.11
-	github.com/rs/zerolog v1.34.0
+	github.com/rs/zerolog v1.35.0
 	github.com/spf13/viper v1.21.0
 	github.com/timtadh/lexmachine v0.2.3
 	golang.org/x/sys v0.42.0

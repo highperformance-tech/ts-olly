@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/VictoriaMetrics/metrics v1.43.2
-	github.com/fsnotify/fsnotify v1.9.0
+	github.com/fsnotify/fsnotify v1.10.1
 	github.com/go-viper/encoding/javaproperties v0.1.0
 	github.com/nxadm/tail v1.4.11
 	github.com/rs/zerolog v1.35.1

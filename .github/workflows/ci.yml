@@ -64,6 +64,9 @@ jobs:
       - name: Test with the release toolchain
         run: go test -race -vet=off ./...
 
+      - name: Check for reachable Go vulnerabilities
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.10.0 ./...
+
       - name: Build binary
         run: make build
 

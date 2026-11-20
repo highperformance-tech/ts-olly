@@ -61,6 +61,9 @@ jobs:
           go-version: stable
           check-latest: true
 
+      - name: Test with the release toolchain
+        run: go test -race -vet=off ./...
+
       - name: Build binary
         run: make build
 

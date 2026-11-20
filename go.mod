@@ -1,16 +1,16 @@
 module github.com/highperformance-tech/ts-olly
 
-go 1.25.0
+go 1.26.0
 
 require (
-	github.com/VictoriaMetrics/metrics v1.44.0
+	github.com/VictoriaMetrics/metrics v1.44.1
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/go-viper/encoding/javaproperties v0.1.0
 	github.com/nxadm/tail v1.4.11
 	github.com/rs/zerolog v1.35.1
 	github.com/spf13/viper v1.21.0
 	github.com/timtadh/lexmachine v0.2.3
-	golang.org/x/sys v0.47.0
+	golang.org/x/sys v0.48.0
 )
 
 require (

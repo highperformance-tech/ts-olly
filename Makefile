@@ -1,5 +1,5 @@
 # Variables
-STATICCHECK_VERSION = 2025.1.1
+STATICCHECK_VERSION = 2026.2.2
 
 # Helpers
 ## help: print this help message
@@ -17,7 +17,7 @@ confirm:
 .PHONY: deps
 deps:
 	@echo 'Installing development tools...'
-	go install honnef.co/go/tools/cmd/staticcheck@$(STATICCHECK_VERSION)
+	GOTOOLCHAIN=auto go install honnef.co/go/tools/cmd/staticcheck@$(STATICCHECK_VERSION)
 
 ## run: run the ts-olly application
 .PHONY: run

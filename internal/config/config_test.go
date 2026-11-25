@@ -65,7 +65,7 @@ func TestConfig(t *testing.T) {
 		c.Key("foo").Set(wanted)
 		got := c.Key("foo").Get()
 		if got != wanted {
-			t.Errorf("wanted %q, got %q\n", wanted, got)
+			t.Errorf("wanted %v, got %v\n", wanted, got)
 		}
 	})
 

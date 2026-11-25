@@ -1,5 +1,5 @@
 # Variables
-STATICCHECK_VERSION = 2025.1.1
+STATICCHECK_VERSION = 2026.2.2
 
 # Helpers
 ## help: print this help message
